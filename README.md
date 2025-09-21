@@ -188,7 +188,7 @@ For issues and questions:
 - Create an issue in the repository
 
 ## Developed By
-<table align="center">
+<table align="center" style="background-color:#f0f0f0; padding:15px; border-radius:10px;">
  <tr>
     <td align="center">
       <img src="https://github.com/Satyaamp.png" width="100"><br>
@@ -205,6 +205,7 @@ For issues and questions:
     </td>
 </tr>
 </table>
+
 
 
 
