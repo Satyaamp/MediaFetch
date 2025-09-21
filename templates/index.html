@@ -2,176 +2,743 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MediaFetch: Universal Image & Video Downloader</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
     <style>
-        body.dark-mode {
-            background-color: #121212 !important;
-            color: #f5f5f5 !important;
+        :root {
+            --primary-green: #4CAF50;
+            --primary-green-hover: #45a049;
+            --light-gray: #f8f9fa;
+            --medium-gray: #e9ecef;
+            --dark-gray: #495057;
+            --text-dark: #212529;
+            --shadow: rgba(0, 0, 0, 0.1);
+            --border-radius: 8px;
         }
-        body.dark-mode .form-control,
-        body.dark-mode .form-select {
-            background-color: #1e1e1e;
-            color: #f5f5f5;
-            border-color: #555;
-        }
-        body.dark-mode .btn-primary {
-            background-color: #333;
-            border-color: #555;
-            color: #f5f5f5;
-        }
-        body.dark-mode .list-group-item {
-            background-color: #1e1e1e;
-            color: #f5f5f5;
-        }
-        body.dark-mode input::placeholder { color: #ccc; opacity:1; }
 
-        .toggle-switch { position: relative; width:60px; height:30px; display:inline-block; margin-left:10px; }
-        .toggle-switch input { opacity:0; width:0; height:0; }
-        .slider { position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background-color:#ccc; transition:0.4s; border-radius:30px; }
-        .slider:before { position:absolute; content:"🌞"; height:26px; width:26px; left:2px; bottom:2px; background-color:white; transition:0.4s; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:18px; }
-        input:checked + .slider { background-color:#666; }
-        input:checked + .slider:before { transform:translateX(30px); content:"🌙"; }
-        .toggle-container { display:flex; align-items:center; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-        #suggestions { z-index:1000; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #ffffff;
+            color: var(--text-dark);
+            line-height: 1.6;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--primary-green) 0%, #66BB6A 100%);
+            color: white;
+            padding: 2rem 0;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="white" opacity="0.1"/><circle cx="50" cy="10" r="0.5" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+            opacity: 0.3;
+        }
+
+        .logo {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .tagline {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Search Section */
+        .search-section {
+            background: white;
+            padding: 2rem 0;
+            box-shadow: 0 2px 10px var(--shadow);
+            position: relative;
+            z-index: 10;
+        }
+
+        .search-form {
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .search-input-group {
+            display: flex;
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .search-input-group:focus-within {
+            border-color: var(--primary-green);
+            box-shadow: 0 4px 25px rgba(76, 175, 80, 0.2);
+        }
+
+        .search-input {
+            flex: 1;
+            border: none;
+            padding: 1rem 1.5rem;
+            font-size: 1rem;
+            outline: none;
+            background: transparent;
+        }
+
+        .search-input::placeholder {
+            color: #999;
+        }
+
+        .category-select {
+            border: none;
+            padding: 1rem;
+            background: transparent;
+            color: var(--dark-gray);
+            outline: none;
+            cursor: pointer;
+            min-width: 150px;
+        }
+
+        .search-btn {
+            background: var(--primary-green);
+            border: none;
+            padding: 1rem 2rem;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .search-btn:hover {
+            background: var(--primary-green-hover);
+        }
+
+        /* Dark Mode Toggle */
+        .dark-mode-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 50px;
+            padding: 0.5rem;
+            box-shadow: 0 2px 10px var(--shadow);
+            backdrop-filter: blur(10px);
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 60px;
+            height: 30px;
+            display: inline-block;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: 0.4s;
+            border-radius: 30px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "☀️";
+            height: 26px;
+            width: 26px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: 0.4s;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        input:checked + .slider {
+            background-color: var(--primary-green);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(30px);
+            content: "🌙";
+        }
+
+        /* Suggestions */
+        #suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border-radius: 0 0 var(--border-radius) var(--border-radius);
+            box-shadow: 0 4px 20px var(--shadow);
+            z-index: 1000;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        #suggestions .list-group-item {
+            border: none;
+            border-bottom: 1px solid var(--medium-gray);
+            padding: 1rem 1.5rem;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        #suggestions .list-group-item:hover {
+            background-color: var(--light-gray);
+        }
+
+        /* Content Sections */
+        .content-section {
+            padding: 3rem 0;
+        }
+
+        .section-title {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-dark);
+        }
+
+        /* Card Grid */
+        .media-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .media-card {
+            background: white;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            box-shadow: 0 2px 15px var(--shadow);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            height: fit-content;
+        }
+
+        .media-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .media-card.highlighted {
+            background-color: #fff3e0;
+            border: 2px solid var(--primary-green);
+        }
+
+        .card-image-container {
+            position: relative;
+            height: 200px;
+            overflow: hidden;
+        }
+
+        .card-img-top {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .media-card:hover .card-img-top,
+        .media-card:hover .card-image {
+            transform: scale(1.05);
+        }
+
+        .card-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.7) 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .media-card:hover .card-overlay {
+            opacity: 1;
+        }
+
+        .overlay-icon {
+            color: white;
+            font-size: 2rem;
+        }
+
+        .card-body {
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .download-btn {
+            background: var(--primary-green);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--border-radius);
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .download-btn:hover {
+            background: var(--primary-green-hover);
+            color: white;
+            text-decoration: none;
+            transform: translateY(-1px);
+        }
 
         /* Modal */
-        .modal { display:none; position:fixed; z-index:1000; padding-top:60px; left:0; top:0; width:100%; height:100%; overflow:auto; background-color:rgba(0,0,0,0.8); }
-        .modal-content { margin:auto; display:block; max-width:80%; max-height:80%; }
-        .close { position:absolute; top:15px; right:35px; color:white; font-size:40px; font-weight:bold; cursor:pointer; }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            animation: fadeIn 0.3s ease;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            max-width: 90%;
+            max-height: 90%;
+            border-radius: var(--border-radius);
+        }
+
+        .close {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            color: white;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 2001;
+            transition: opacity 0.3s ease;
+        }
+
+        .close:hover {
+            opacity: 0.7;
+        }
+
+        /* Dark Mode Styles */
+        body.dark-mode {
+            background-color: #121212;
+            color: #ffffff;
+        }
+
+        body.dark-mode .search-section {
+            background: #1e1e1e;
+        }
+
+        body.dark-mode .search-input-group {
+            background: #2d2d2d;
+            border-color: #404040;
+        }
+
+        body.dark-mode .search-input,
+        body.dark-mode .category-select {
+            background: transparent;
+            color: #ffffff;
+        }
+
+        body.dark-mode .search-input::placeholder {
+            color: #888;
+        }
+
+        body.dark-mode #suggestions {
+            background: #2d2d2d;
+        }
+
+        body.dark-mode #suggestions .list-group-item {
+            background: #2d2d2d;
+            color: #ffffff;
+            border-color: #404040;
+        }
+
+        body.dark-mode #suggestions .list-group-item:hover {
+            background: #404040;
+        }
+
+        body.dark-mode .media-card {
+            background: #2d2d2d;
+        }
+
+        body.dark-mode .media-card.highlighted {
+            background-color: #2d4a2d;
+            border-color: var(--primary-green);
+        }
+
+        body.dark-mode .dark-mode-toggle {
+            background: rgba(45, 45, 45, 0.9);
+        }
+
+        body.dark-mode .content-section {
+            background: #121212;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .header {
+                padding: 1.5rem 0;
+            }
+
+            .logo {
+                font-size: 2rem;
+            }
+
+            .search-input-group {
+                flex-direction: column;
+            }
+
+            .category-select {
+                border-top: 1px solid var(--medium-gray);
+                min-width: auto;
+            }
+
+            .media-grid {
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+                gap: 1rem;
+            }
+
+            .dark-mode-toggle {
+                top: 10px;
+                right: 10px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .media-grid {
+                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            }
+
+            .search-section {
+                padding: 1rem 0;
+            }
+
+            .content-section {
+                padding: 2rem 0;
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
     </style>
 </head>
-<body class="bg-light">
+<body>
+    <!-- Dark Mode Toggle -->
+    <div class="dark-mode-toggle">
+        <label class="toggle-switch">
+            <input type="checkbox" id="darkModeToggle">
+            <span class="slider"></span>
+        </label>
+    </div>
 
-<div class="container mt-5">
-    <!-- Heading -->
-    <h1 class="text-center mb-4">MediaFetch</h1>
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="text-center flex-grow-1">Search, View and Download Instantly</h1>
-        <div class="toggle-container">
-            <label class="toggle-switch">
-                <input type="checkbox" id="darkModeToggle">
-                <span class="slider"></span>
-            </label>
+    <!-- Header -->
+    <div class="header">
+        <div class="container">
+            <h1 class="logo">MediaFetch</h1>
+            <p class="tagline">Search, View and Download Instantly</p>
         </div>
     </div>
 
-    <!-- Search Form -->
-    <form action="/search" method="POST" class="d-flex justify-content-center mb-3 position-relative">
-        <input type="text" id="searchQuery" name="query" class="form-control me-2" placeholder="Enter product name" autocomplete="off" required>
-        <select name="category" class="form-select me-2">
-            <option value="">All Categories</option>
-            {% for cat in categories %}
-            <option value="{{ cat }}">{{ cat.capitalize() }}</option>
-            {% endfor %}
-        </select>
-        <button type="submit" class="btn btn-primary">Search</button>
-        <ul id="suggestions" class="list-group position-absolute" style="top:42px; left:0; width:100%;"></ul>
-    </form>
-</div>
-
-<!-- Trending Section -->
-<div class="container mt-5">
-    <h3 class="mb-3">🔥 Trending Images</h3>
-    <div class="row">
-        {% for img in trending_images %}
-        <div class="col-sm-6 col-md-4 col-lg-3 mb-4">
-            <div class="card h-100 shadow-sm" data-title="{{ img.title|lower }}">
-                <img src="{{ img.medium }}" class="card-img-top img-thumbnail" onclick="openModal('{{ img.medium }}', false)" alt="image">
-                <div class="card-body text-center">
-                    <a href="/download_image?url={{ img.medium }}&query=trending" class="btn btn-primary btn-sm mt-2">Download</a>
+    <!-- Search Section -->
+    <div class="search-section">
+        <div class="container">
+            <form action="/search" method="POST" class="search-form">
+                <div class="search-input-group">
+                    <input type="text" id="searchQuery" name="query" class="search-input" placeholder="Search for images, videos, and more..." autocomplete="off" required>
+                    <select name="category" class="category-select">
+                        <option value="">All Categories</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat }}">{{ cat.capitalize() }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="search-btn">
+                        <i class="fas fa-search"></i>
+                        Search
+                    </button>
                 </div>
+                <ul id="suggestions" class="list-group"></ul>
+            </form>
+        </div>
+    </div>
+
+    <!-- Trending Images Section -->
+    <div class="content-section">
+        <div class="container">
+            <h3 class="section-title">
+                <i class="fas fa-fire" style="color: #ff4757;"></i>
+                Trending Images
+            </h3>
+            <div class="media-grid">
+                {% for img in trending_images %}
+                <div class="media-card" data-title="{{ img.title|lower }}">
+                    <div class="card-image-container">
+                        <img src="{{ img.medium }}" class="card-image img-thumbnail" onclick="openModal('{{ img.medium }}', false)" alt="image">
+                        <div class="card-overlay">
+                            <i class="fas fa-search-plus overlay-icon"></i>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <a href="/download_image?url={{ img.medium }}&query=trending" class="download-btn">
+                            <i class="fas fa-download"></i>
+                            Download
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
             </div>
         </div>
-        {% endfor %}
     </div>
 
-    <h3 class="mb-3 mt-4">🎬 Trending Videos</h3>
-    <div class="row">
-        {% for vid in trending_videos %}
-        <div class="col-sm-6 col-md-4 col-lg-3 mb-4">
-            <div class="card h-100 shadow-sm" data-title="{{ vid.title|lower }}">
-                <video class="card-img-top" controls onclick="openModal('{{ vid }}', true)">
-                    <source src="{{ vid }}" type="video/mp4">
-                </video>
-                <div class="card-body text-center">
-                    <a href="/download_video?url={{ vid }}&query=trending" class="btn btn-primary btn-sm mt-2">Download</a>
+    <!-- Trending Videos Section -->
+    <div class="content-section">
+        <div class="container">
+            <h3 class="section-title">
+                <i class="fas fa-video" style="color: #5742f5;"></i>
+                Trending Videos
+            </h3>
+            <div class="media-grid">
+                {% for vid in trending_videos %}
+                <div class="media-card" data-title="{{ vid.title|lower }}">
+                    <div class="card-image-container">
+                        <video class="card-img-top" controls onclick="openModal('{{ vid }}', true)" allowfullscreen>
+                            <source src="{{ vid }}" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                        <div class="card-overlay">
+                            <i class="fas fa-play overlay-icon"></i>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <a href="/download_video?url={{ vid }}&query=trending" class="download-btn">
+                            <i class="fas fa-download"></i>
+                            Download
+                        </a>
+                    </div>
                 </div>
+                {% endfor %}
             </div>
         </div>
-        {% endfor %}
     </div>
-</div>
 
-<!-- Modal -->
-<div id="modal" class="modal" onclick="closeModal()">
-    <span class="close">&times;</span>
-    <img class="modal-content" id="modalImg">
-    <video class="modal-content" id="modalVideo" controls></video>
-</div>
+    <!-- Modal -->
+    <div id="modal" class="modal" onclick="closeModal()">
+        <span class="close">&times;</span>
+        <img class="modal-content" id="modalImg" style="display: none;">
+        <video class="modal-content" id="modalVideo" controls style="display: none;" allowfullscreen></video>
+    </div>
 
-<script>
-const input = document.getElementById('searchQuery');
-const suggestionsList = document.getElementById('suggestions');
+    <script>
+        // Search functionality
+        const input = document.getElementById('searchQuery');
+        const suggestionsList = document.getElementById('suggestions');
 
-input.addEventListener('input', async () => {
-    const term = input.value;
-    if(!term) { suggestionsList.innerHTML=''; return; }
-    const res = await fetch(`/autocomplete?term=${term}`);
-    const data = await res.json();
-    suggestionsList.innerHTML = '';
-    data.suggestions.forEach(item => {
-        const li = document.createElement('li');
-        li.textContent = item;
-        li.classList.add('list-group-item');
-        li.onclick = () => {
-            input.value = item;
-            suggestionsList.innerHTML = '';
+        input.addEventListener('input', async () => {
+            const term = input.value;
+            if (!term) {
+                suggestionsList.innerHTML = '';
+                return;
+            }
 
-            // Remove highlight from all cards
-            document.querySelectorAll('.card').forEach(card => {
-                card.style.backgroundColor = '';
-            });
+            try {
+                const res = await fetch(`/autocomplete?term=${term}`);
+                const data = await res.json();
+                suggestionsList.innerHTML = '';
+                
+                data.suggestions.forEach(item => {
+                    const li = document.createElement('li');
+                    li.textContent = item;
+                    li.classList.add('list-group-item');
+                    li.onclick = () => {
+                        input.value = item;
+                        suggestionsList.innerHTML = '';
+                        
+                        // Remove highlight from all cards
+                        document.querySelectorAll('.media-card').forEach(card => {
+                            card.classList.remove('highlighted');
+                        });
+                        
+                        // Highlight matching cards
+                        const termLower = item.toLowerCase();
+                        document.querySelectorAll(`.media-card[data-title*="${termLower}"]`).forEach(card => {
+                            card.classList.add('highlighted');
+                        });
+                    };
+                    suggestionsList.appendChild(li);
+                });
+            } catch (error) {
+                console.error('Error fetching suggestions:', error);
+            }
+        });
 
-            // Highlight matching cards
-            const termLower = item.toLowerCase();
-            document.querySelectorAll(`.card[data-title*="${termLower}"]`).forEach(card => {
-                card.style.backgroundColor = '#fffae6'; // highlight color
-            });
-        };
-        suggestionsList.appendChild(li);
-    });
-});
+        // Click outside to close suggestions
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.search-form')) {
+                suggestionsList.innerHTML = '';
+            }
+        });
 
-// Dark Mode toggle
-const darkModeToggle = document.getElementById('darkModeToggle');
-darkModeToggle.addEventListener('change', () => {
-    document.body.classList.toggle('dark-mode');
-});
+        // Dark Mode toggle
+        const darkModeToggle = document.getElementById('darkModeToggle');
+        
+        // Load saved preference
+        if (localStorage.getItem('darkMode') === 'enabled') {
+            document.body.classList.add('dark-mode');
+            darkModeToggle.checked = true;
+        }
 
-// Modal functions
-function openModal(src, isVideo) {
-    const modal = document.getElementById("modal");
-    const modalImg = document.getElementById("modalImg");
-    const modalVideo = document.getElementById("modalVideo");
-    if(isVideo) {
-        modalVideo.src = src;
-        modalVideo.style.display = "block";
-        modalImg.style.display = "none";
-    } else {
-        modalImg.src = src;
-        modalImg.style.display = "block";
-        modalVideo.style.display = "none";
-    }
-    modal.style.display = "block";
-}
-function closeModal() {
-    document.getElementById("modal").style.display = "none";
-}
-</script>
+        darkModeToggle.addEventListener('change', () => {
+            document.body.classList.toggle('dark-mode');
+            localStorage.setItem('darkMode', document.body.classList.contains('dark-mode') ? 'enabled' : 'disabled');
+        });
 
+        // Modal functions
+        function openModal(src, isVideo) {
+            const modal = document.getElementById("modal");
+            const modalImg = document.getElementById("modalImg");
+            const modalVideo = document.getElementById("modalVideo");
+
+            if (isVideo) {
+                modalVideo.src = src;
+                modalVideo.style.display = "block";
+                modalImg.style.display = "none";
+                modalVideo.play(); // Video auto-play in modal
+                addFullscreenButton(); // Add fullscreen button for videos
+            } else {
+                modalImg.src = src;
+                modalImg.style.display = "block";
+                modalVideo.style.display = "none";
+            }
+
+            modal.style.display = "flex"; // Use flex to center content
+            document.body.style.overflow = 'hidden'; // Prevent background scrolling
+        }
+
+        // Enhanced fullscreen function for videos
+        function toggleFullscreen(videoElement) {
+            if (!videoElement) return;
+
+            if (videoElement.requestFullscreen) {
+                videoElement.requestFullscreen();
+            } else if (videoElement.webkitRequestFullscreen) {
+                videoElement.webkitRequestFullscreen();
+            } else if (videoElement.mozRequestFullScreen) {
+                videoElement.mozRequestFullScreen();
+            } else if (videoElement.msRequestFullscreen) {
+                videoElement.msRequestFullscreen();
+            }
+        }
+
+        // Add fullscreen button to modal video
+        function addFullscreenButton() {
+            const modalVideo = document.getElementById("modalVideo");
+            if (modalVideo && !document.getElementById("fullscreenBtn")) {
+                const fullscreenBtn = document.createElement("button");
+                fullscreenBtn.id = "fullscreenBtn";
+                fullscreenBtn.innerHTML = '<i class="fas fa-expand"></i>';
+                fullscreenBtn.className = "btn btn-light position-absolute";
+                fullscreenBtn.style.cssText = `
+                    position: absolute;
+                    top: 10px;
+                    left: 10px;
+                    z-index: 2002;
+                    background: rgba(0,0,0,0.7);
+                    color: white;
+                    border: none;
+                    border-radius: 4px;
+                    padding: 8px 12px;
+                    cursor: pointer;
+                    font-size: 16px;
+                `;
+                fullscreenBtn.onclick = function(e) {
+                    e.stopPropagation();
+                    toggleFullscreen(modalVideo);
+                };
+
+                const modal = document.getElementById("modal");
+                modal.appendChild(fullscreenBtn);
+            }
+        }
+
+        function closeModal() {
+            const modal = document.getElementById("modal");
+            const modalVideo = document.getElementById("modalVideo");
+            
+            modal.style.display = "none";
+            if (modalVideo.src) {
+                modalVideo.pause(); // Pause video if playing
+                modalVideo.currentTime = 0; // Reset video to beginning
+            }
+            document.body.style.overflow = 'auto'; // Restore scrolling
+        }
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
+
+        // Smooth scroll behavior
+        document.documentElement.style.scrollBehavior = 'smooth';
+    </script>
 </body>
 </html>
