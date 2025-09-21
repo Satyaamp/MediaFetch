@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MediaFetch: Universal Image & Video Downloader</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+    <style>
+        body.dark-mode {
+            background-color: #121212 !important;
+            color: #f5f5f5 !important;
+        }
+        body.dark-mode .form-control,
+        body.dark-mode .form-select {
+            background-color: #1e1e1e;
+            color: #f5f5f5;
+            border-color: #555;
+        }
+        body.dark-mode .btn-primary {
+            background-color: #333;
+            border-color: #555;
+            color: #f5f5f5;
+        }
+        body.dark-mode .list-group-item {
+            background-color: #1e1e1e;
+            color: #f5f5f5;
+        }
+        body.dark-mode input::placeholder { color: #ccc; opacity:1; }
+
+        .toggle-switch { position: relative; width:60px; height:30px; display:inline-block; margin-left:10px; }
+        .toggle-switch input { opacity:0; width:0; height:0; }
+        .slider { position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background-color:#ccc; transition:0.4s; border-radius:30px; }
+        .slider:before { position:absolute; content:"🌞"; height:26px; width:26px; left:2px; bottom:2px; background-color:white; transition:0.4s; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:18px; }
+        input:checked + .slider { background-color:#666; }
+        input:checked + .slider:before { transform:translateX(30px); content:"🌙"; }
+        .toggle-container { display:flex; align-items:center; }
+
+        #suggestions { z-index:1000; }
+
+        /* Modal */
+        .modal { display:none; position:fixed; z-index:1000; padding-top:60px; left:0; top:0; width:100%; height:100%; overflow:auto; background-color:rgba(0,0,0,0.8); }
+        .modal-content { margin:auto; display:block; max-width:80%; max-height:80%; }
+        .close { position:absolute; top:15px; right:35px; color:white; font-size:40px; font-weight:bold; cursor:pointer; }
+    </style>
+</head>
+<body class="bg-light">
+
+<div class="container mt-5">
+    <!-- Heading -->
+    <h1 class="text-center mb-4">MediaFetch</h1>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="text-center flex-grow-1">Search, View and Download Instantly</h1>
+        <div class="toggle-container">
+            <label class="toggle-switch">
+                <input type="checkbox" id="darkModeToggle">
+                <span class="slider"></span>
+            </label>
+        </div>
+    </div>
+
+    <!-- Search Form -->
+    <form action="/search" method="POST" class="d-flex justify-content-center mb-3 position-relative">
+        <input type="text" id="searchQuery" name="query" class="form-control me-2" placeholder="Enter product name" autocomplete="off" required>
+        <select name="category" class="form-select me-2">
+            <option value="">All Categories</option>
+            {% for cat in categories %}
+            <option value="{{ cat }}">{{ cat.capitalize() }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-primary">Search</button>
+        <ul id="suggestions" class="list-group position-absolute" style="top:42px; left:0; width:100%;"></ul>
+    </form>
+</div>
+
+<!-- Trending Section -->
+<div class="container mt-5">
+    <h3 class="mb-3">🔥 Trending Images</h3>
+    <div class="row">
+        {% for img in trending_images %}
+        <div class="col-sm-6 col-md-4 col-lg-3 mb-4">
+            <div class="card h-100 shadow-sm" data-title="{{ img.title|lower }}">
+                <img src="{{ img.medium }}" class="card-img-top img-thumbnail" onclick="openModal('{{ img.medium }}', false)" alt="image">
+                <div class="card-body text-center">
+                    <a href="/download_image?url={{ img.medium }}&query=trending" class="btn btn-primary btn-sm mt-2">Download</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <h3 class="mb-3 mt-4">🎬 Trending Videos</h3>
+    <div class="row">
+        {% for vid in trending_videos %}
+        <div class="col-sm-6 col-md-4 col-lg-3 mb-4">
+            <div class="card h-100 shadow-sm" data-title="{{ vid.title|lower }}">
+                <video class="card-img-top" controls onclick="openModal('{{ vid }}', true)">
+                    <source src="{{ vid }}" type="video/mp4">
+                </video>
+                <div class="card-body text-center">
+                    <a href="/download_video?url={{ vid }}&query=trending" class="btn btn-primary btn-sm mt-2">Download</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Modal -->
+<div id="modal" class="modal" onclick="closeModal()">
+    <span class="close">&times;</span>
+    <img class="modal-content" id="modalImg">
+    <video class="modal-content" id="modalVideo" controls></video>
+</div>
+
+<script>
+const input = document.getElementById('searchQuery');
+const suggestionsList = document.getElementById('suggestions');
+
+input.addEventListener('input', async () => {
+    const term = input.value;
+    if(!term) { suggestionsList.innerHTML=''; return; }
+    const res = await fetch(`/autocomplete?term=${term}`);
+    const data = await res.json();
+    suggestionsList.innerHTML = '';
+    data.suggestions.forEach(item => {
+        const li = document.createElement('li');
+        li.textContent = item;
+        li.classList.add('list-group-item');
+        li.onclick = () => {
+            input.value = item;
+            suggestionsList.innerHTML = '';
+
+            // Remove highlight from all cards
+            document.querySelectorAll('.card').forEach(card => {
+                card.style.backgroundColor = '';
+            });
+
+            // Highlight matching cards
+            const termLower = item.toLowerCase();
+            document.querySelectorAll(`.card[data-title*="${termLower}"]`).forEach(card => {
+                card.style.backgroundColor = '#fffae6'; // highlight color
+            });
+        };
+        suggestionsList.appendChild(li);
+    });
+});
+
+// Dark Mode toggle
+const darkModeToggle = document.getElementById('darkModeToggle');
+darkModeToggle.addEventListener('change', () => {
+    document.body.classList.toggle('dark-mode');
+});
+
+// Modal functions
+function openModal(src, isVideo) {
+    const modal = document.getElementById("modal");
+    const modalImg = document.getElementById("modalImg");
+    const modalVideo = document.getElementById("modalVideo");
+    if(isVideo) {
+        modalVideo.src = src;
+        modalVideo.style.display = "block";
+        modalImg.style.display = "none";
+    } else {
+        modalImg.src = src;
+        modalImg.style.display = "block";
+        modalVideo.style.display = "none";
+    }
+    modal.style.display = "block";
+}
+function closeModal() {
+    document.getElementById("modal").style.display = "none";
+}
+</script>
+
+</body>
+</html>

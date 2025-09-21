@@ -1,0 +1,23 @@
+body {
+    font-family: Arial, sans-serif;
+}
+
+ul#suggestions {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+    position: absolute;
+    background: white;
+    border: 1px solid #ddd;
+    width: 400px;
+    z-index: 100;
+}
+
+ul#suggestions li {
+    padding: 5px;
+    cursor: pointer;
+}
+
+ul#suggestions li:hover {
+    background-color: #f0f0f0;
+}
