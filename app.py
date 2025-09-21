@@ -46,7 +46,7 @@ def home():
 
 
 # Search route
-@app.route('/search', methods=['POST'])
+@app.route('/search', methods=['GET','POST'])
 def search():
     query = request.form.get('query')
     category = request.form.get('category', '')
